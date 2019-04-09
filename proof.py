@@ -30,20 +30,26 @@ fourBase = fourierBaseNp(N)
 v = np.array([1.2 * np.sin(0.1 * t) + 0.1*t for t in range(N)])
 
 fourBaseInv = np.linalg.inv(fourBase)
-v_F = np.dot(fourBaseInv, v)
+v_F = fourBaseInv.dot(v)
 
 v_F_correct = np.fft.fft(v) / N
 
-fig = plt.figure()
-ax0 = fig.add_subplot(141)
-ax0.plot(v)
-ax1 = fig.add_subplot(142)
-ax1.plot(np.real(v_F))
-ax2 = fig.add_subplot(143)
-ax2.plot(np.real(v_F_correct))
-ax3 = fig.add_subplot(144)
-ax3.plot(np.real(v_F - v_F_correct))
-plt.show()
+v_reconstr = fourBase.dot(v_F)
+
+# fig = plt.figure()
+# ax0 = fig.add_subplot(141)
+# ax0.set_title("v")
+# ax0.plot(v)
+# ax1 = fig.add_subplot(142)
+# ax1.set_title("v_F")
+# ax1.plot(np.real(v_F))
+# ax2 = fig.add_subplot(143)
+# ax2.set_title("v_F correct")
+# ax2.plot(np.real(v_F_correct))
+# ax3 = fig.add_subplot(144)
+# ax3.set_title("v reconstructed")
+# ax3.plot(v_reconstr)
+# plt.show()
 
 
 
@@ -56,19 +62,19 @@ plt.show()
 
 
 
-def convMatrixNp(q, a, c):
-    Rows = len(c)
-    Cols = len(a)
-    mtrx = np.zeros((Rows, Cols))
-    for row in range(Rows):
-        for col in range(Cols):
-            mtrx[row,col] = q(c[row] - a[col])
+def convMatrixNp(q):
+    N = len(q)
+    startoff = int(N/2)
+    mtrx = np.zeros((N, N))
+    for row in range(N):
+        for col in range(N):
+            indx = startoff + row - col
+            if 0 <= indx < N:
+                mtrx[row,col] = q[startoff + row - col]
     return mtrx
 
 
-a = np.array([t for t in range(N)])
-b = np.array([t for t in range(N)])
-c = a + b
+
 
 def p(a):
     return 3.1 * np.cos(0.2 * a) + 0.2
@@ -76,25 +82,23 @@ def p(a):
 def q(b): 
     return 1.1 * np.sin(0.1 * b) + 0.4
 
-pData = p(a)
-qData = q(b)
+pData = [p(a) for a in range(N)]
+qData = [q(b) for b in range(N)]
 
-convMtrx_q = convMatrixNp(q, a, c)
-plt.imshow(convMtrx_q)
-plt.show()
+convMtrx_q = convMatrixNp(qData)
 r = convMtrx_q.dot(pData)
 
 r_correct = np.convolve(pData, qData, 'same')
 
 
-fig = plt.figure()
-ax0 = fig.add_subplot(131)
-ax0.plot(r)
-ax1 = fig.add_subplot(132)
-ax1.plot(r_correct)
+# fig = plt.figure()
+# ax0 = fig.add_subplot(131)
+# ax0.plot(r)
+# ax1 = fig.add_subplot(132)
+# ax1.plot(r_correct)
 # ax2 = fig.add_subplot(133)
 # ax2.plot(r - r_correct)
-plt.show()
+# plt.show()
 
 # -------------------------------------------------------------------------------
 # Part 3: test if ConvMatrix_q * p == p * FourBase^-1 * q
@@ -106,15 +110,22 @@ plt.show()
 #       = FourBase * ( FourBase^-1 * p * FourBase^-1 * q )
 #       = p * FourBase^-1 * q
 
-r_correct   = np.convolve(pData, qData, 'same')
+
 r_convMtrx  = convMtrx_q.dot(pData)
 r_fourInv   = fourBase.dot( fourBaseInv.dot(pData) * fourBaseInv.dot(qData) )
+r_fourInv_correct = N * np.fft.ifft( (1/N) * np.fft.fft(pData) * (1/N) * np.fft.fft(qData) )
 
 fig = plt.figure()
-ax0 = fig.add_subplot(131)
+ax0 = fig.add_subplot(141)
+ax0.set_title("p * q correct")
 ax0.plot(r_correct)
-ax1 = fig.add_subplot(132)
+ax1 = fig.add_subplot(142)
+ax1.set_title("p * q conv with ConvMatrix")
 ax1.plot(r_convMtrx)
-ax2 = fig.add_subplot(133)
+ax2 = fig.add_subplot(143)
+ax2.set_title("p * q conv with FourierMatrix")
 ax2.plot(r_fourInv)
+ax3 = fig.add_subplot(144)
+ax3.set_title("p * q conv with np.fft")
+ax3.plot(r_fourInv_correct)
 plt.show()
